@@ -14,8 +14,9 @@ int current_thread_number = 0;
 void print_matrix(int **matrix, int rows, int cols);
 pthread_mutex_t incrementer_mutex;
 
-int** create_matrix(int rows, int cols){
-    int** matrix= (int **)malloc(rows * sizeof(int *));
+int **create_matrix(int rows, int cols)
+{
+    int **matrix = (int **)malloc(rows * sizeof(int *));
     for (size_t i = 0; i < rows; i++)
     {
         matrix[i] = (int *)malloc(cols * sizeof(int));
@@ -65,10 +66,9 @@ int generate_random_number(int max)
 {
     return rand() % max;
 }
-int main(void)
+int main(int argc, char *argv[])
 {
-
-    int N = 30;
+    int N = atoi(argv[1]);
     int total_sub_matrix = (N / 5) * (N / 5);
     global_matrix = create_matrix(total_sub_matrix, 5);
 
@@ -96,6 +96,11 @@ int main(void)
     }
     pthread_mutex_destroy(&incrementer_mutex);
     print_matrix(global_matrix, total_sub_matrix, 5);
+
+    for (size_t i = 0; i < total_sub_matrix; i++)
+    {
+        free(global_matrix[i]);
+    }
 
     free(global_matrix);
     return 0;
