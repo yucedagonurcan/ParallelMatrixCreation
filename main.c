@@ -43,7 +43,7 @@ void *generate_thread_func(void *args)
     {
         global_matrix[current_thread_number][j] = vector[j];
     }
-
+ 
     current_thread_number++;
     printf("\n Incremented thread_number by thread: %d and thread_number: %d\n", *myThreadID, current_thread_number);
 
