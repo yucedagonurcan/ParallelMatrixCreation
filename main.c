@@ -4,14 +4,24 @@
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
+
 int generate_random_number(int max);
 void *generate_thread_func(void *args);
+int **create_matrix(int rows, int cols);
 
 int **global_matrix;
 int current_thread_number = 0;
 void print_matrix(int **matrix, int rows, int cols);
 pthread_mutex_t incrementer_mutex;
 
+int** create_matrix(int rows, int cols){
+    int** matrix= (int **)malloc(rows * sizeof(int *));
+    for (size_t i = 0; i < rows; i++)
+    {
+        matrix[i] = (int *)malloc(cols * sizeof(int));
+    }
+    return matrix;
+}
 void print_matrix(int **matrix, int rows, int cols)
 {
 
@@ -60,11 +70,7 @@ int main(void)
 
     int N = 30;
     int total_sub_matrix = (N / 5) * (N / 5);
-    global_matrix = (int **)malloc(total_sub_matrix * sizeof(int *));
-    for (size_t i = 0; i < total_sub_matrix; i++)
-    {
-        global_matrix[i] = (int *)malloc(5 * sizeof(int));
-    }
+    global_matrix = create_matrix(total_sub_matrix, 5);
 
     if (pthread_mutex_init(&incrementer_mutex, NULL) != 0)
     {
