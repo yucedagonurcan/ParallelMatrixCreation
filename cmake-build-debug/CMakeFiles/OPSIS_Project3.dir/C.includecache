@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/olmaditekrar/Desktop/OPSIS_Project3/main.c
+math.h
+-
+signal.h
+-
+stdio.h
+-
+stdlib.h
+-
+

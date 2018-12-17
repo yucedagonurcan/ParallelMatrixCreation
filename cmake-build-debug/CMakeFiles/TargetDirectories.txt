@@ -1,0 +1,3 @@
+/Users/olmaditekrar/Desktop/OPSIS_Project3/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/olmaditekrar/Desktop/OPSIS_Project3/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/olmaditekrar/Desktop/OPSIS_Project3/cmake-build-debug/CMakeFiles/OPSIS_Project3.dir
