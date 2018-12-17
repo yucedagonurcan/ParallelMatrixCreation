@@ -43,11 +43,12 @@ void *generate_thread_func(void *args)
     {
         global_matrix[current_thread_number][j] = vector[j];
     }
- 
+
     current_thread_number++;
     printf("\n Incremented thread_number by thread: %d and thread_number: %d\n", *myThreadID, current_thread_number);
 
     pthread_mutex_unlock(&incrementer_mutex);
+    return NULL;
 }
 
 int generate_random_number(int max)
@@ -59,7 +60,7 @@ int main(void)
 
     int N = 30;
     int total_sub_matrix = (N / 5) * (N / 5);
-    global_matrix = (int **)malloc(total_sub_matrix * sizeof(int));
+    global_matrix = (int **)malloc(total_sub_matrix * sizeof(int *));
     for (size_t i = 0; i < total_sub_matrix; i++)
     {
         global_matrix[i] = (int *)malloc(5 * sizeof(int));
@@ -89,5 +90,7 @@ int main(void)
     }
     pthread_mutex_destroy(&incrementer_mutex);
     print_matrix(global_matrix, total_sub_matrix, 5);
+
+    free(global_matrix);
     return 0;
 }
