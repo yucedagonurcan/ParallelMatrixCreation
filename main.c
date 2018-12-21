@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <limits.h>
 
-struct Vector
+struct QueueMatrix
 {
     int index;
-    int *array;
+    int **matrix;
 };
 
 // A structure to represent a queue
@@ -17,13 +17,13 @@ struct Queue
 {
     int front, rear, size;
     unsigned capacity;
-    struct Vector *vector_array;
+    struct QueueMatrix *queue_matrix;
 };
 
 int generate_random_number(int max);
 void *generate_thread_func(void *args);
-void print_vector(struct Vector vector, int length, int deneme);
-void print_queue(struct Queue *queue, int rows, int cols);
+void print_queue(struct Queue *queue, int total_sub_matrix);
+void print_matrix(struct QueueMatrix queue_matrix, int length);
 int **create_matrix(int rows, int cols);
 void print_array(int *arr, int length);
 
@@ -35,11 +35,16 @@ struct Queue *createQueue(unsigned capacity)
     queue->capacity = capacity;
     queue->front = queue->size = 0;
     queue->rear = capacity - 1; // This is important, see the enqueue
-    queue->vector_array = (struct Vector *)malloc(capacity * sizeof(struct Vector));
+    queue->queue_matrix = (struct QueueMatrix *)malloc(capacity * sizeof(struct QueueMatrix));
 
     for (size_t i = 0; i < capacity; i++)
     {
-        queue->vector_array[i].array = (int *)malloc(5 * sizeof(int));
+        queue->queue_matrix[i].matrix = (int **)malloc(5 * sizeof(int *));
+
+        for (size_t j = 0; j < 5; j++)
+        {
+            queue->queue_matrix[i].matrix[j] = (int *)malloc(5 * sizeof(int));
+        }
     }
 
     return queue;
@@ -59,66 +64,65 @@ int isEmpty(struct Queue *queue)
 
 // Function to add an vector to the queue.
 // It changes rear and size
-void enqueue(struct Queue *queue, int *vector, int index)
+void enqueue(struct Queue *queue, int matrix[5][5], int index)
 {
     if (isFull(queue))
         return;
 
-    if (index == 0)
-    {
-        printf("Index is zero\n");
-    }
     queue->rear = (queue->rear + 1) % queue->capacity;
-    queue->vector_array[queue->rear].array = (int *)malloc(5 * sizeof(int));
-    queue->vector_array[queue->rear].index = index;
-    for (size_t i = 0; i < 5; i++)
+    // queue->queue_matrix[queue->rear].matrix = (int *)malloc(5 * sizeof(int));
+    queue->queue_matrix[queue->rear].index = index;
+    for (int i = 0; i < 5; i++)
     {
-        queue->vector_array[queue->rear].array[i] = vector[i];
+        for (int j = 0; j < 5; j++)
+        {
+            queue->queue_matrix[queue->rear].matrix[i][j] = matrix[i][j];
+        }
     }
 
     queue->size = queue->size + 1;
-    queue->vector_array[queue->rear].index = index;
+    // queue->queue_matrix[queue->rear].index = index;
 }
 
 // Function to remove an vector from queue.
 // It changes front and size
-struct Vector dequeue(struct Queue *queue)
+struct QueueMatrix dequeue(struct Queue *queue)
 {
     if (isEmpty(queue))
     {
-        struct Vector null_vec;
-        null_vec.array = NULL;
+        struct QueueMatrix null_vec;
+        null_vec.matrix = NULL;
         return null_vec;
     }
-    struct Vector item = queue->vector_array[queue->front];
+    struct QueueMatrix item = queue->queue_matrix[queue->front];
     queue->front = (queue->front + 1) % queue->capacity;
     queue->size = queue->size - 1;
     return item;
 }
 
 // Function to get front of queue
-struct Vector front(struct Queue *queue)
+struct QueueMatrix front(struct Queue *queue)
 {
     if (isEmpty(queue))
     {
-        struct Vector null_vec;
-        null_vec.array = NULL;
+        struct QueueMatrix null_vec;
+        null_vec.matrix = NULL;
         return null_vec;
     }
-    return queue->vector_array[queue->front];
+    return queue->queue_matrix[queue->front];
 }
 
 // Function to get rear of queue
-struct Vector rear(struct Queue *queue)
+struct QueueMatrix rear(struct Queue *queue)
 {
     if (isEmpty(queue))
     {
-        struct Vector null_vec;
-        null_vec.array = NULL;
+        struct QueueMatrix null_vec;
+        null_vec.matrix = NULL;
         return null_vec;
     }
 
-    return queue->vector_array[queue->rear];
+    return queue->queue_matrix[queue->rear];
 }
 
 int **log_thread_matrix;
@@ -127,21 +131,27 @@ int total_sub_matrix;
 pthread_mutex_t incrementer_mutex;
 struct Queue *generate_threads_queue;
 
-void print_queue(struct Queue *queue, int rows, int cols)
+void print_queue(struct Queue *queue, int total_sub_matrix)
 {
-
-    for (size_t i = 0; i < rows; i++)
+    for (size_t i = 0; i < total_sub_matrix; i++)
     {
-        print_vector(queue->vector_array[i], cols, i);
-        printf(" ==> Index: %d\n", queue->vector_array[i].index);
+
+        printf("\n ==> Index: %d\n", queue->queue_matrix[i].index);
+        print_matrix(queue->queue_matrix[i], 5);
     }
 }
-void print_vector(struct Vector vector, int length, int deneme)
+void print_matrix(struct QueueMatrix queue_matrix, int length)
 {
     printf("\n");
-    for (size_t j = 0; j < length; j++)
+
+    for (size_t i = 0; i < length; i++)
     {
-        printf("%d ", vector.array[j]);
+        printf("\n");
+        for (size_t j = 0; j < length; j++)
+        {
+            printf("%d ", queue_matrix.matrix[i][j]);
+        }
+        printf("\n");
     }
 }
 void print_array(int *arr, int length)
@@ -159,12 +169,15 @@ void *generate_thread_func(void *args)
 
     while (total_sub_matrix > last_generated_submatrix_index)
     {
-        // Creating the current vector for the current thread-in-run.
-        int vector[5];
+        // Creating the current matrix for the current thread-in-run.
+        int matrix[5][5];
         for (int i = 0; i < 5; i++)
         {
-            int random_number = generate_random_number(100);
-            vector[i] = random_number;
+
+            for (size_t j = 0; j < 5; j++)
+            {
+                matrix[i][j] = generate_random_number(100);
+            }
         }
 
         int slot_to_take;
@@ -185,7 +198,7 @@ void *generate_thread_func(void *args)
 
         // printf("\nThread: %d, will enqueue the %d slot, last_generated: %d", *myThreadID,
         //        slot_to_take, last_generated_submatrix_index);
-        enqueue(generate_threads_queue, vector, slot_to_take);
+        enqueue(generate_threads_queue, matrix, slot_to_take);
     }
     return NULL;
 }
@@ -201,24 +214,22 @@ void *log_thread_func(void *args)
 
         pthread_mutex_lock(&incrementer_log_mutex);
         int slot_index_taken = last_computed_submatrix_index;
-        int real_index = generate_threads_queue->vector_array[last_computed_submatrix_index].index;
+        int real_index = generate_threads_queue->queue_matrix[last_computed_submatrix_index].index;
         last_computed_submatrix_index++;
         pthread_mutex_unlock(&incrementer_log_mutex);
 
         int row;
-        if (real_index <= (N / 5))
-        {
-            row = 0;
-        }
-        else
-        {
-            int left_trail = (real_index * 5 * 5); // If N = 10, real_index=3 => left_trail = 15
+        // if (real_index <= (N / 5))
+        // {
+        //     row = 0;
+        // }
+        // else
+        //{
+        row = ((real_index / (N / 5)) % 5) * 5;
+        //}
+        int col = real_index % (N / 5) * 5;
 
-            row = ((real_index * 5) / (N)) * N;
-        }
-        int col = real_index % (N);
-
-        if (last_computed_submatrix_index >= last_generated_submatrix_index)
+        if (last_computed_submatrix_index > last_generated_submatrix_index)
         {
             pthread_exit(0);
             return NULL;
@@ -226,9 +237,13 @@ void *log_thread_func(void *args)
 
         else
         {
-            for (size_t i = col; i < col + 5; i++)
+
+            for (size_t i = row; i < row + 5; i++)
             {
-                log_thread_matrix[row][i] = generate_threads_queue->vector_array[slot_index_taken].array[i % 5];
+                for (size_t j = col; j < col + 5; j++)
+                {
+                    log_thread_matrix[i][j] = generate_threads_queue->queue_matrix[slot_index_taken].matrix[i - row][j - col];
+                }
             }
             printf("\nLog thread %d for indices: (%d,%d): \n", real_index, row, col);
             print_array(log_thread_matrix[row], 5);
@@ -300,7 +315,7 @@ int main(int argc, char *argv[])
         pthread_join(log_threads[i], NULL);
     }
 
-    //print_queue(generate_threads_queue, total_sub_matrix, 5);
+    print_queue(generate_threads_queue, total_sub_matrix);
 
     printf("\n Printing the LOG Matrix:\n");
     for (size_t i = 0; i < N; i++)
@@ -317,9 +332,9 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < total_sub_matrix; i++)
     {
-        free(generate_threads_queue->vector_array[i].array);
+        free(generate_threads_queue->queue_matrix[i].matrix);
     }
-    free(generate_threads_queue->vector_array);
+    free(generate_threads_queue->queue_matrix);
     free(generate_threads_queue);
 
     return 0;
