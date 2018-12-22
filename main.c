@@ -21,12 +21,12 @@ struct Queue
     struct QueueMatrix *queue_matrix;
 };
 
-void *generate_thread_func(void *args);
 void *log_thread_func(void *args);
+void *generate_thread_func(void *args);
 
+void print_array(int *arr, int length);
 void print_queue(struct Queue *queue, int total_sub_matrix);
 void print_matrix(struct QueueMatrix queue_matrix, int length);
-void print_array(int *arr, int length);
 
 int isFull(struct Queue *queue);
 int isEmpty(struct Queue *queue);
@@ -35,22 +35,22 @@ int generate_random_number(int max);
 int **create_matrix(int rows, int cols);
 struct Queue *createQueue(unsigned capacity);
 
-void enqueue(struct Queue *queue, int matrix[5][5], int index);
-struct QueueMatrix dequeue(struct Queue *queue);
-struct QueueMatrix front(struct Queue *queue);
 struct QueueMatrix rear(struct Queue *queue);
+struct QueueMatrix front(struct Queue *queue);
+struct QueueMatrix dequeue(struct Queue *queue);
+void enqueue(struct Queue *queue, int matrix[5][5], int index);
 
-int **log_thread_matrix;
-int last_generated_submatrix_index = 0;
 int total_sub_matrix;
-pthread_mutex_t incrementer_generate_mutex;
+int **log_thread_matrix;
 pthread_mutex_t incrementer_log_mutex;
+pthread_mutex_t incrementer_generate_mutex;
 
+int N;
 struct Queue *generate_threads_queue;
 int last_computed_submatrix_index = 0;
-int N;
+int last_generated_submatrix_index = 0;
 
-// function to create a queue of given capacity.
+// Function to create a queue of given capacity.
 // It initializes size of queue as 0
 struct Queue *createQueue(unsigned capacity)
 {
@@ -85,7 +85,7 @@ int isEmpty(struct Queue *queue)
     return (queue->size == 0);
 }
 
-// Function to add an vector to the queue.
+// Function to add an matrix to the queue.
 // It changes rear and size
 void enqueue(struct Queue *queue, int matrix[5][5], int index)
 {
@@ -93,7 +93,6 @@ void enqueue(struct Queue *queue, int matrix[5][5], int index)
         return;
 
     queue->rear = (queue->rear + 1) % queue->capacity;
-    // queue->queue_matrix[queue->rear].matrix = (int *)malloc(5 * sizeof(int));
     queue->queue_matrix[queue->rear].index = index;
     for (int i = 0; i < 5; i++)
     {
@@ -104,10 +103,28 @@ void enqueue(struct Queue *queue, int matrix[5][5], int index)
     }
 
     queue->size = queue->size + 1;
-    // queue->queue_matrix[queue->rear].index = index;
+}
+// Function to add an matrix to the queue.
+// It changes rear and size
+void enqueue2D(struct Queue *queue, int **matrix, int index)
+{
+    if (isFull(queue))
+        return;
+
+    queue->rear = (queue->rear + 1) % queue->capacity;
+    queue->queue_matrix[queue->rear].index = index;
+    for (int i = 0; i < 5; i++)
+    {
+        for (int j = 0; j < 5; j++)
+        {
+            queue->queue_matrix[queue->rear].matrix[i][j] = matrix[i][j];
+        }
+    }
+
+    queue->size = queue->size + 1;
 }
 
-// Function to remove an vector from queue.
+// Function to remove a matrix from queue.
 // It changes front and size
 struct QueueMatrix dequeue(struct Queue *queue)
 {
@@ -180,6 +197,21 @@ void print_array(int *arr, int length)
     }
 }
 
+int generate_random_number(int max)
+{
+    return rand() % max;
+}
+
+int **create_matrix(int rows, int cols)
+{
+    int **matrix = (int **)malloc(rows * sizeof(int *));
+    for (size_t i = 0; i < rows; i++)
+    {
+        matrix[i] = (int *)malloc(cols * sizeof(int));
+    }
+    return matrix;
+}
+
 void *generate_thread_func(void *args)
 {
     int *myThreadID = (int *)args;
@@ -213,8 +245,7 @@ void *generate_thread_func(void *args)
         }
         pthread_mutex_unlock(&incrementer_generate_mutex);
 
-        printf("\nThread: %d, will enqueue the %d slot, last_generated: %d", *myThreadID,
-               slot_to_take, last_generated_submatrix_index);
+        printf("\nThread: %d, will enqueue the %d slot, last_generated: %d", *myThreadID, slot_to_take, last_generated_submatrix_index);
         enqueue(generate_threads_queue, matrix, slot_to_take);
     }
     return NULL;
@@ -257,25 +288,67 @@ void *log_thread_func(void *args)
     }
     return NULL;
 }
-int generate_random_number(int max)
+pthread_mutex_t incrementer_mod_mutex;
+int last_mod_submatrix_index = 0;
+struct Queue *mod_threads_queue;
+int **GenerateModMatrix(struct QueueMatrix queue_matrix)
 {
-    return rand() % max;
-}
-int **create_matrix(int rows, int cols)
-{
-    int **matrix = (int **)malloc(rows * sizeof(int *));
-    for (size_t i = 0; i < rows; i++)
+    int **mod_matrix;
+    mod_matrix = create_matrix(5, 5);
+    int first_number = queue_matrix.matrix[0][0];
+
+    for (size_t i = 0; i < 5; i++)
     {
-        matrix[i] = (int *)malloc(cols * sizeof(int));
+
+        for (size_t j = 0; j < 5; j++)
+        {
+            mod_matrix[i][j] = queue_matrix.matrix[i][j] % first_number;
+        }
     }
-    return matrix;
+    return mod_matrix;
+}
+void *mod_thread_func(void *args)
+{
+    int *myThreadID = (int *)args;
+
+    while (generate_threads_queue->size >= last_mod_submatrix_index)
+    {
+
+        pthread_mutex_lock(&incrementer_mod_mutex);
+        if (last_mod_submatrix_index == 0)
+        {
+            printf("\nMod Queue is created by Thread: %d", *myThreadID);
+            mod_threads_queue = createQueue(total_sub_matrix);
+        }
+        int slot_index_taken = last_mod_submatrix_index;
+        int real_index = generate_threads_queue->queue_matrix[last_mod_submatrix_index].index;
+        last_mod_submatrix_index++;
+        pthread_mutex_unlock(&incrementer_mod_mutex);
+
+        if (last_mod_submatrix_index > last_generated_submatrix_index)
+        {
+            pthread_exit(0);
+            return NULL;
+        }
+
+        else
+        {
+            int **mod_matrix;
+            mod_matrix = GenerateModMatrix(generate_threads_queue->queue_matrix[slot_index_taken]);
+            enqueue2D(mod_threads_queue, mod_matrix, slot_index_taken);
+            // printf("\nLog thread %d for indices: (%d,%d): \n", real_index, row, col);
+            //print_matrix(mod_matrix[row], 5);
+        }
+    }
+    return NULL;
 }
 int main(int argc, char *argv[])
 {
-    /// Get command line arguments.
+    // Get command line arguments.
     N = atoi(argv[1]);
     int num_of_generate_threads = atoi(argv[2]);
     int num_of_log_threads = atoi(argv[3]);
+    int num_of_mod_threads = atoi(argv[4]);
     /// Get command line arguments.
 
     // Initialization of variables.
@@ -287,19 +360,25 @@ int main(int argc, char *argv[])
 
     if (pthread_mutex_init(&incrementer_generate_mutex, NULL) != 0)
     {
-        printf("\nMutex init has failed\n");
+        printf("\nGenerate Mutex init has failed\n");
         return 1;
     }
     if (pthread_mutex_init(&incrementer_log_mutex, NULL) != 0)
     {
-        printf("\nMutex init has failed\n");
+        printf("\nLog Mutex init has failed\n");
         return 1;
     }
-    // Initialization, should only be called once.
+    if (pthread_mutex_init(&incrementer_mod_mutex, NULL) != 0)
+    {
+        printf("\nMod Mutex init has failed\n");
+        return 1;
+    }
+    // Initialization of randomness, should only be called once.
     srand(time(NULL));
 
     pthread_t generate_threads[num_of_generate_threads];
     pthread_t log_threads[num_of_log_threads];
+    pthread_t mod_threads[num_of_mod_threads];
 
     for (int i = 0; i < num_of_generate_threads; i++)
     {
@@ -309,6 +388,10 @@ int main(int argc, char *argv[])
     for (int i = 0; i < num_of_log_threads; i++)
     {
         pthread_create(&(log_threads[i]), NULL, log_thread_func, (void *)&log_threads[i]);
+    }
+    for (int i = 0; i < num_of_mod_threads; i++)
+    {
+        pthread_create(&(mod_threads[i]), NULL, mod_thread_func, (void *)&mod_threads[i]);
     }
     // Wait for all generate threads.
     for (int i = 0; i < num_of_generate_threads; i++)
@@ -320,9 +403,14 @@ int main(int argc, char *argv[])
     {
         pthread_join(log_threads[i], NULL);
     }
-
+    for (int i = 0; i < num_of_mod_threads; i++)
+    {
+        pthread_join(mod_threads[i], NULL);
+    }
+    printf("\nGenerate Threads:\n");
     print_queue(generate_threads_queue, total_sub_matrix);
-
+    printf("\nMod Threads:\n");
+    print_queue(mod_threads_queue, total_sub_matrix);
     printf("\n Printing the LOG Matrix:\n");
     for (size_t i = 0; i < N; i++)
     {
