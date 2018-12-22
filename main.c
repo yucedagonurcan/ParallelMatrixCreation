@@ -25,8 +25,8 @@ void *log_thread_func(void *args);
 void *generate_thread_func(void *args);
 
 void print_array(int *arr, int length);
+void print_matrix(int **queue_matrix, int length);
 void print_queue(struct Queue *queue, int total_sub_matrix);
-void print_matrix(struct QueueMatrix queue_matrix, int length);
 
 int isFull(struct Queue *queue);
 int isEmpty(struct Queue *queue);
@@ -171,10 +171,10 @@ void print_queue(struct Queue *queue, int total_sub_matrix)
     {
 
         printf("\n ==> Index: %d\n", queue->queue_matrix[i].index);
-        print_matrix(queue->queue_matrix[i], 5);
+        print_matrix(queue->queue_matrix[i].matrix, 5);
     }
 }
-void print_matrix(struct QueueMatrix queue_matrix, int length)
+void print_matrix(int **queue_matrix, int length)
 {
     printf("\n");
 
@@ -183,7 +183,7 @@ void print_matrix(struct QueueMatrix queue_matrix, int length)
         printf("\n");
         for (size_t j = 0; j < length; j++)
         {
-            printf("%d ", queue_matrix.matrix[i][j]);
+            printf("%d ", queue_matrix[i][j]);
         }
         printf("\n");
     }
@@ -302,7 +302,14 @@ int **GenerateModMatrix(struct QueueMatrix queue_matrix)
 
         for (size_t j = 0; j < 5; j++)
         {
-            mod_matrix[i][j] = queue_matrix.matrix[i][j] % first_number;
+            if (first_number > 0)
+            {
+                mod_matrix[i][j] = queue_matrix.matrix[i][j] % first_number;
+            }
+            else
+            {
+                mod_matrix[i][j] = queue_matrix.matrix[i][j];
+            }
         }
     }
     return mod_matrix;
@@ -336,8 +343,8 @@ void *mod_thread_func(void *args)
             int **mod_matrix;
             mod_matrix = GenerateModMatrix(generate_threads_queue->queue_matrix[slot_index_taken]);
             enqueue2D(mod_threads_queue, mod_matrix, slot_index_taken);
-            // printf("\nLog thread %d for indices: (%d,%d): \n", real_index, row, col);
-            //print_matrix(mod_matrix[row], 5);
+            printf("\nMod thread %d \n", real_index);
+            print_matrix(mod_matrix, 5);
         }
     }
     return NULL;
