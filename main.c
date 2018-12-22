@@ -225,7 +225,7 @@ void *log_thread_func(void *args)
         // }
         // else
         //{
-        row = ((real_index / (N / 5)) % 5) * 5;
+        row = ((real_index / (N / 5)) % N) * 5;
         //}
         int col = real_index % (N / 5) * 5;
 
