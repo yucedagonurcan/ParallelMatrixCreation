@@ -5,6 +5,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <getopt.h>
 
 // A structure to represent matrix that each of the Queue's array indices has.
 struct QueueMatrix
@@ -558,17 +559,42 @@ void *mod_thread_func(void *args)
 int main(int argc, char *argv[])
 {
     // Get command line arguments.
-    N = atoi(argv[1]);
-    int num_of_generate_threads = atoi(argv[2]);
-    int num_of_log_threads = atoi(argv[3]);
-    int num_of_mod_threads = atoi(argv[4]);
-    int num_of_add_threads = atoi(argv[5]);
-    /// Get command line arguments.
+    int option;
+    int num_of_generate_threads;
+    int num_of_log_threads;
+    int num_of_add_threads;
+    int num_of_mod_threads;
+    while ((option = getopt(argc, argv, "d:n:")) != -1)
+    {
+        switch (option)
+        {
+        case 'd':
+            N = atoi(optarg);
+            if ((N % 5) != 0)
+            {
+                printf("\nError, N is not a scalar of 5, N:%d\n", N);
+                exit(0);
+                break;
+            }
+
+            break;
+        case 'n':
+            num_of_generate_threads = atoi(optarg);
+            num_of_log_threads = atoi(argv[5]);
+            num_of_mod_threads = atoi(argv[6]);
+            num_of_add_threads = atoi(argv[7]);
+            break;
+
+        default:
+            printf("\nError, option is not recognized %c\n", option);
+            exit(0);
+            break;
+        }
+    }
 
     printf("\n\t\t======= Program is starting =======\n\n");
-    // Initialization of variables.
+    // Initialization of total_sub_matrix.
     total_sub_matrix = (N / 5) * (N / 5);
-    // Initialization of variables.
 
     // Initialize the mutexes.
     if (pthread_mutex_init(&incrementer_generate_mutex, NULL) != 0)
@@ -617,6 +643,10 @@ int main(int argc, char *argv[])
         pthread_create(&(generate_threads[i]), NULL, generate_thread_func, (void *)&generate_threads[i]);
     }
 
+    for (int i = 0; i < num_of_generate_threads; i++)
+    {
+        pthread_join(generate_threads[i], NULL);
+    }
     for (int i = 0; i < num_of_log_threads; i++)
     {
         pthread_create(&(log_threads[i]), NULL, log_thread_func, (void *)&log_threads[i]);
@@ -631,10 +661,6 @@ int main(int argc, char *argv[])
     }
 
     // Wait for all threads.
-    for (int i = 0; i < num_of_generate_threads; i++)
-    {
-        pthread_join(generate_threads[i], NULL);
-    }
     for (int i = 0; i < num_of_log_threads; i++)
     {
         pthread_join(log_threads[i], NULL);
@@ -661,11 +687,14 @@ int main(int argc, char *argv[])
     }
 
     WriteMatrixAndSumToFile("output.txt");
+
     // Destroy all the mutexes.
     pthread_mutex_destroy(&incrementer_generate_mutex);
     pthread_mutex_destroy(&incrementer_log_mutex);
     pthread_mutex_destroy(&incrementer_mod_mutex);
     pthread_mutex_destroy(&printer_mutex);
+    pthread_mutex_destroy(&adder_mutex);
+    pthread_mutex_destroy(&incrementer_add_mutex);
 
     // Free the malloc'd variables.
     for (size_t i = 0; i < total_sub_matrix; i++)
